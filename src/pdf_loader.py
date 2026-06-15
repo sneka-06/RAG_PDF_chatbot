@@ -1,5 +1,8 @@
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
+
 
 PDF_PATH = "data/sample 1.pdf"
 
@@ -16,14 +19,22 @@ text_splitter = RecursiveCharacterTextSplitter(
 chunks = text_splitter.split_documents(documents)
 print(f"Total chunks created: {len(chunks)}")
 
-for i, chunk in enumerate(chunks[:3]):
-    print(f"\nChunk {i+1}")
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
+
+vector_store = Chroma.from_documents(
+    documents=chunks,
+    embedding=embeddings,
+    persist_directory="./chroma_db"
+)
+print(vector_store._collection.count())
+
+results = vector_store.similarity_search(
+    "What is Auto Scaling?",
+    k=3
+)
+for i, doc in enumerate(results, 1):
+    print(f"\nResult {i}")
     print("-" * 50)
-    print(chunk.page_content)
-
-for i in range(2):
-    print(f"\nChunk {i+1}")
-    print(chunks[i].page_content[-100:])
-
-    print(f"\nChunk {i+2}")
-    print(chunks[i+1].page_content[:100])
+    print(doc.page_content[:500])
